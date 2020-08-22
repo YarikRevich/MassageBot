@@ -1,38 +1,6 @@
-import requests
-import asyncio
-import json
-import os
 from aiogram import types
-from notification_formatter import FormattedInfo
-from RJAPI.contrib import RJAPI
-import datetime
+from data.notification_formatter import FormattedInfo
 
-class Data(RJAPI):
-
-    class Meta:
-        url = "http://localhost:8000/ru/api/records/"
-        auth_data = (os.getenv("USERNAME"),os.getenv("PASS"))
-
-data = Data()
-
-async def start_pooling(bot):
-
-    while True:
-        await asyncio.sleep(3)
-        info = data.get_and_update_json(json_data={"seen":True},filters={"seen":False},put_method=True)
-        if info:
-            for dictionary in info["results"]:
-                formatter = FormattedInfo(dictionary)
-
-                markup = types.InlineKeyboardMarkup()
-                button1 = types.InlineKeyboardButton("Указать как выполненый!",callback_data=dictionary["id"])
-                markup.add(button1)
-
-                await bot.send_message(os.getenv("USER_ID"),formatter.get_info,reply_markup=markup)
-        else:
-            pass
-        await asyncio.sleep(3)
-        
 class Tutorial:
 
     @property
@@ -45,7 +13,7 @@ class Tutorial:
             "phone":"0632260575",
         }
         formatter = FormattedInfo(test_data)
-        return formatter.get_info
+        return await formatter.get_formatted_data
 
     @property
     async def get_tutorial_description_message(self) -> str:
@@ -75,27 +43,25 @@ class Tutorial:
     async def answer_review(self) -> str:
         return "✅ Под тестовой записью Вы можете увидеть кнопку.Нажав на неё Вы укажете,что данный заказ был выполнен\nНу,а сейчас,для теста,нажмите на кнопку и Вы увидете сюрприз!"
 
-async def send_tutorial(query: types.InlineQuery) -> str:
 
-    tutorial = Tutorial()
+    async def send_tutorial(self, query: types.InlineQuery) -> str:
 
-    all_messages = [
-        await tutorial.get_tutorial_description_message,
-        await tutorial.get_test_record,
-        await tutorial.get_record_user_name_review,
-        await tutorial.get_record_service_name,
-        await tutorial.record_description_review,
-        await tutorial.record_time_review,
-        await tutorial.record_phone_review,
-        await tutorial.answer_review
-
-    ]
+        all_messages = [
+            await self.get_tutorial_description_message,
+            await self.get_test_record,
+            await self.get_record_user_name_review,
+            await self.get_record_service_name,
+            await self.record_description_review,
+            await self.record_time_review,
+            await self.record_phone_review,
+            await self.answer_review
+        ]
     
-    for message in all_messages:
-        if message == await tutorial.get_test_record:
-            markup = types.InlineKeyboardMarkup()
-            button1 = types.InlineKeyboardButton("Указать как выполненый!",callback_data="tutorial")
-            markup.add(button1)
-            await query.message.answer(message, reply_markup=markup)
-        else:
-            await query.message.answer(message)
+        for message in all_messages:
+            if message == await self.get_test_record:
+                markup = types.InlineKeyboardMarkup()
+                button1 = types.InlineKeyboardButton("Указать как выполненый!",callback_data="tutorial")
+                markup.add(button1)
+                await query.message.answer(message, reply_markup=markup)
+            else:
+                await query.message.answer(message)
