@@ -10,22 +10,30 @@ from data.contrib import Record, Service
 from tutorial.tutorial import Tutorial
 from tutorial.quiz import random_fact
 from states import AddService
+from validators import TypeValidator
 
+#All the important data for the futher work
 
 TOKEN = os.getenv("TOKEN")
 bot = Bot(TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 dp.middleware.setup(LoggingMiddleware())
 
+#Important instances of classes for the futher work
+
 record = Record()
 service = Service()
-
 tutorial = Tutorial()
+
+#A dict for the adding a new service 
+
 new_service = {}
 
+#------------------
 
 @dp.message_handler(IDFilter(user_id=os.getenv("USER_ID")), state="*", commands=["start"])
 async def start_func(message: types.Message):
+    """Handler for the /start command to start a relationship between user and bot"""    
 
     markup = types.InlineKeyboardMarkup()
     button1 = types.InlineKeyboardButton(callback_data="TUTORIALyes",text="Да")
@@ -37,6 +45,7 @@ async def start_func(message: types.Message):
 
 @dp.message_handler(lambda message: message.text == "Добавить услугу",state="*")
 async def start_adding_service(message: types.Message):
+    """A handler to start an adding of a new service"""
 
     current_state = dp.current_state(user=message.from_user.id)
     await current_state.set_state(AddService.CONFIRMING)
@@ -50,7 +59,8 @@ async def start_adding_service(message: types.Message):
 
 
 @dp.message_handler(state=AddService.NAME)
-async def add_name_service(message: types.Message):
+async def add_name_to_service(message: types.Message):
+    """Handler to process the adding of a name to a new service"""
 
     markup = types.InlineKeyboardMarkup()
     button1 = types.InlineKeyboardButton(callback_data="NAMEno", text="Нет,хочу поменять")
@@ -60,7 +70,8 @@ async def add_name_service(message: types.Message):
 
 
 @dp.message_handler(state=AddService.DESCRIPTION)
-async def add_description_service(message: types.Message):
+async def add_description_to_service(message: types.Message):
+    """Handler to process the adding of a description to a new service"""
 
     markup = types.InlineKeyboardMarkup()
     button1 = types.InlineKeyboardButton(callback_data="DESCRIPTIONno", text="Нет,хочу поменять")
@@ -70,17 +81,82 @@ async def add_description_service(message: types.Message):
 
 
 @dp.message_handler(state=AddService.PRICE)
-async def add_description_service(message: types.Message):
+async def add_price_to_service(message: types.Message):
+    """Handler to process the adding of a price to a new service"""
 
     markup = types.InlineKeyboardMarkup()
     button1 = types.InlineKeyboardButton(callback_data="PRICEno", text="Нет,хочу поменять")
     button2 = types.InlineKeyboardButton(callback_data="PRICEyes", text="Да,хочу продолжить.")
     markup.add(button1, button2)
-    await message.answer("Цена новосозданного услуги '%s'.Продолжим?" % (message.text), reply_markup=markup) 
+    if await TypeValidator.is_digit(message.text):
+        return await message.answer("Цена новосозданного услуги '%s'.Продолжим?" % (message.text), reply_markup=markup) 
+    await message.answer("Цена не может быть текстом! Напишите правильно!")
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["EUR", "USD", "UAH", "CHF"]), state="*")
+async def add_currency_to_service(query: types.CallbackQuery):
+    """Handler to process the adding of a currency to a new service"""
+    
+    if query.data == "EUR":
+
+        new_service[query.from_user.id]["currency"] = "EUR"
+        await bot.delete_message(query.message.chat.id, message_id=query.message.message_id)
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.CURRENCY)
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="CURRENCYno", text="Нет,хочу поменять")
+        button2 = types.InlineKeyboardButton(callback_data="CURRENCYyes", text="Да,хочу продолжить.")
+        markup.add(button1, button2)
+        
+        return await query.message.answer("Валюта для новой услуги - 'EUR'.Правильно?", reply_markup=markup) 
+
+
+    elif query.data == "USD":
+
+        new_service[query.from_user.id]["currency"] = "USD"
+        await bot.delete_message(query.message.chat.id, message_id=query.message.message_id)
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.CURRENCY)
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="CURRENCYno", text="Нет,хочу поменять")
+        button2 = types.InlineKeyboardButton(callback_data="CURRENCYyes", text="Да,хочу продолжить.")
+        markup.add(button1, button2)
+        
+        return await query.message.answer("Валюта для новой услуги - 'USD'.Правильно?", reply_markup=markup) 
+
+
+    elif query.data == "UAH":
+
+        new_service[query.from_user.id]["currency"] = "UAH"
+        await bot.delete_message(query.message.chat.id, message_id=query.message.message_id)
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.CURRENCY)
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="CURRENCYno", text="Нет,хочу поменять")
+        button2 = types.InlineKeyboardButton(callback_data="CURRENCYyes", text="Да,хочу продолжить.")
+        markup.add(button1, button2)
+        
+        return await query.message.answer("Валюта для новой услуги - 'UAH'.Правильно?", reply_markup=markup) 
+
+
+    elif query.data == "CHF":
+
+        new_service[query.from_user.id]["currency"] = "CHF"
+        await bot.delete_message(query.message.chat.id, message_id=query.message.message_id)
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.CURRENCY)
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="CURRENCYno", text="Нет,хочу поменять")
+        button2 = types.InlineKeyboardButton(callback_data="CURRENCYyes", text="Да,хочу продолжить.")
+        markup.add(button1, button2)
+        
+        return await query.message.answer("Валюта для новой услуги - 'CHF'.Правильно?", reply_markup=markup) 
+
 
 
 @dp.message_handler(state=AddService.PHOTO, content_types=["photo"])
-async def image_getter(file :types.InputMediaPhoto):
+async def add_image_to_service(file :types.InputMediaPhoto):
+    """Handler to process the adding of a photo to a new service"""
 
     photo = await file["photo"][0].get_file()
     photo_to_send = await bot.download_file(photo.file_path)
@@ -96,76 +172,28 @@ async def image_getter(file :types.InputMediaPhoto):
 
 @dp.message_handler(state=AddService.PHOTO)
 async def image_getter(message :types.Message):
+    """Handler to notificate user that he needs to a photo not a text"""
+
     await message.answer(text="Текст - не фото!")
 
 
 @dp.message_handler(CommandHelp(),IDFilter(user_id=os.getenv("USER_ID")),state="*")
 async def help_command(message :types.Message):
+    """Sends some information about this bot"""
+
     await message.answer("❗️Данный бот был розработан специально для сайта http://emassage.name")
 
 
 @dp.message_handler(state="*")
 async def user_is_not_owner(message: types.Message):
+    """Handler to send that user is not an owner"""
+
     await message.answer("😔Ты не владелец данного бота")
-
-
-@dp.callback_query_handler(lambda query: (query.data in ["EUR", "USD", "UAH", "CHF"]), state="*")
-async def currency_callback(query: types.CallbackQuery):
-    
-    if query.data == "EUR":
-
-        new_service[query.from_user.id]["currency"] = "EUR"
-        current_state = dp.current_state(user=query.from_user.id)
-        await current_state.set_state(AddService.CURRENCY)
-        markup = types.InlineKeyboardMarkup()
-        button1 = types.InlineKeyboardButton(callback_data="CURRENCYno", text="Нет,хочу поменять")
-        button2 = types.InlineKeyboardButton(callback_data="CURRENCYyes", text="Да,хочу продолжить.")
-        markup.add(button1, button2)
-        
-        return await query.message.answer("Валюта для новой услуги - 'EUR'.Правильно?", reply_markup=markup) 
-
-
-    elif query.data == "USD":
-
-        new_service[query.from_user.id]["currency"] = "USD"
-        current_state = dp.current_state(user=query.from_user.id)
-        await current_state.set_state(AddService.CURRENCY)
-        markup = types.InlineKeyboardMarkup()
-        button1 = types.InlineKeyboardButton(callback_data="CURRENCYno", text="Нет,хочу поменять")
-        button2 = types.InlineKeyboardButton(callback_data="CURRENCYyes", text="Да,хочу продолжить.")
-        markup.add(button1, button2)
-        
-        return await query.message.answer("Валюта для новой услуги - 'USD'.Правильно?", reply_markup=markup) 
-
-
-    elif query.data == "UAH":
-
-        new_service[query.from_user.id]["currency"] = "UAH"
-        current_state = dp.current_state(user=query.from_user.id)
-        await current_state.set_state(AddService.CURRENCY)
-        markup = types.InlineKeyboardMarkup()
-        button1 = types.InlineKeyboardButton(callback_data="CURRENCYno", text="Нет,хочу поменять")
-        button2 = types.InlineKeyboardButton(callback_data="CURRENCYyes", text="Да,хочу продолжить.")
-        markup.add(button1, button2)
-        
-        return await query.message.answer("Валюта для новой услуги - 'UAH'.Правильно?", reply_markup=markup) 
-
-
-    elif query.data == "CHF":
-
-        new_service[query.from_user.id]["currency"] = "CHF"
-        current_state = dp.current_state(user=query.from_user.id)
-        await current_state.set_state(AddService.CURRENCY)
-        markup = types.InlineKeyboardMarkup()
-        button1 = types.InlineKeyboardButton(callback_data="CURRENCYno", text="Нет,хочу поменять")
-        button2 = types.InlineKeyboardButton(callback_data="CURRENCYyes", text="Да,хочу продолжить.")
-        markup.add(button1, button2)
-        
-        return await query.message.answer("Валюта для новой услуги - 'CHF'.Правильно?", reply_markup=markup) 
 
 
 @dp.callback_query_handler(lambda query: query.data == "tutorial", state="*")
 async def tutorial_callback(query: types.CallbackQuery):
+    """Handler for the test confirming button"""
 
     for index in range(-1,7):
         await bot.delete_message(chat_id=query.message.chat.id,message_id=query.message.message_id+index)
@@ -178,6 +206,7 @@ async def tutorial_callback(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: ( query.data in ["TUTORIALno", "TUTORIALyes"] ), state="*")
 async def tutorial_passage(query :types.CallbackQuery):
+    """Handler to understand wether user wants to pass a tutorial"""
 
     if query.data == "TUTORIALyes":
         for index in range(-1,1):
@@ -202,7 +231,15 @@ async def tutorial_passage(query :types.CallbackQuery):
     "DESCRIPTIONno", "DESCRIPTIONyes", "PRICEno", "PRICEyes", 
     "CURRENCYno", "CURRENCYyes", "PHOTOno", "PHOTOyes"]), state="*")
 async def callback(query: types.CallbackQuery):
-
+    """Handler for the creating a new service.
+    Contains:
+    -> CONFIRMING processor
+    -> NAME processor
+    -> DESCRIPTION processor
+    -> PRICE processor
+    -> CURRENCY processor
+    -> PHOTO processor
+    """
 
     if query.data == "CONFIRMINGno":
         current_state = dp.current_state(user=query.from_user.id)
@@ -294,11 +331,60 @@ async def callback(query: types.CallbackQuery):
         await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
         await service.test_new_service(bot, query,new_service[query.from_user.id])
         await query.message.answer("Проверте данные новой услуги")
-        await query.message.answer("Хотите добавить?")
+
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="ADDyes", text="Да")
+        button2 = types.InlineKeyboardButton(callback_data="ADDno", text="Нет")
+        markup.add(button1, button2)
+
+        await query.message.answer("Все правильно?", reply_markup=markup)
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["ADDyes", "ADDno"]), state="*")
+async def service_add_confiramtion(query: types.CallbackQuery):
+    """Handler to understand wether user wants to add a new service"""
+
+    if query.data == "ADDyes":
+
+        await service.create_new_service(bot, query, new_service[query.from_user.id])
+        await bot.delete_message(query.message.chat.id, message_id=query.message.message_id)
+        await query.message.answer("Поздравляю!Услуга добавлена")
+
+    elif query.data == "ADDno":
+
+        await bot.delete_message(query.message.chat.id, message_id=query.message.message_id)
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="REWRITEyes", text="Да")
+        button2 = types.InlineKeyboardButton(callback_data="REWRITEno", text="Нет")
+        markup.add(button1, button2)
+
+        await query.message.answer("Ок,хотите переделать?", reply_markup=markup)
+
+
+@dp.callback_query_handler(lambda query: ( query.data in ["REWRITEyes", "REWRITEno"]), state="*")
+async def rewrite_confiramation(query: types.CallbackQuery):
+    """Handler to understand whether user wants to rewrite his new service or not"""
+
+    if query.data == "REWRITEyes":
+    
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.NAME)
+        await query.message.answer("Хорошо начнем с начала.А именно с названия")
+        
+
+    elif query.data == "REWRITEno":
+
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.reset_state()
+        await query.message.answer("Ну ладно")
+    
+
+
 
 
 @dp.callback_query_handler(lambda query: True, state="*")
 async def client_confirmation(query: types.CallbackQuery):
+    """A callback hander to make the record inactive and done"""
 
     author_name = await record.utils.update_data_and_get_author(params={"pk": query.data}, json_data={"status": True})
     await bot.edit_message_text(text=f"✅Заказ для {author_name} - выполнен", 

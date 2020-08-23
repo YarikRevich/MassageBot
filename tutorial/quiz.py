@@ -2,7 +2,9 @@ from bs4 import BeautifulSoup
 import requests
 import random
 
-async def parser():
+async def parser() -> list:
+    """Retursn a list of the facts gotten from site"""
+
     page = requests.get("https://europaplus.ru/news/samye-interesnye-fakty-obo-vsem-na-svete")
     full_data = BeautifulSoup(page.text, features="html.parser")
     p_data = full_data.find_all("p", class_="typography typography_type_text typography_size_max typography_mark_light")
@@ -12,6 +14,8 @@ async def parser():
 
 
 
-async def random_fact():
+async def random_fact() -> str:
+    """Returns a random fact from previously gotten list of facts"""
+
     all_facts = await parser()
     return random.choice(all_facts)

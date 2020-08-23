@@ -24,7 +24,7 @@ class Record(SourceSetting):
 
         while True:
             await asyncio.sleep(3)
-            info = self.record.get_and_update_json(json_data={"seen":True},filters={"seen":False},put_method=True)
+            info = self.record.get_and_update_json(json_data={"seen":True},filters={"seen":False},patch_method=True)
             if info:
                 for dictionary in info["results"]:
                     formatter = FormattedInfo(dictionary)
@@ -37,14 +37,16 @@ class Record(SourceSetting):
             else:
                 pass
             await asyncio.sleep(3)
-        
+
 
 
 class Service(SourceSetting):
+    """Class for the work with service model from web-application"""
 
     utils = Utils()
 
-    async def test_new_service(self, bot, query,new_service_data) -> bool:
+    async def test_new_service(self, bot, query: types.CallbackQuery ,new_service_data: dict) -> None:
+        """Creates a fake service to check whether user likes everything he has done"""
 
         photo_to_send = await bot.download_file(new_service_data["photo"].file_path)
 
@@ -58,15 +60,18 @@ class Service(SourceSetting):
                 new_service_data["currency"]
              ))
 
-    async def create_new_service(self, name:str, description:str, photo:bytes, price:int, currency:str) -> bool:
-        
-        self.service.create_entry(json_data={
-            "name": name,
-            "description": description,
-            "price": price,
-            "currency": currency
-            }, files={
-                f"{await self.utils.get_random_id()}": photo,
-            })
+    async def create_new_service(self, bot, query: types.CallbackQuery, new_service_data: dict) -> None:
+        """Creates a new service"""
 
-        return True
+        photo_to_save = await bot.download_file(new_service_data["photo"].file_path)
+
+        self.service.create_entry(data={
+            "name": new_service_data["name"],
+            "description": new_service_data["description"],
+            "price": new_service_data["price"],
+            "currency": new_service_data["currency"]
+            }, files={
+                f"photo": (await self.utils.get_random_id(
+                        new_service_data["photo"].file_path.split(".")[-1]
+                ), photo_to_save)
+            })

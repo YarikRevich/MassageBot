@@ -1,12 +1,13 @@
 import os
 from RJAPI.contrib import RJAPI
 
+
 class SourceSetting:
     """
     Special class for the setting some settings
     for the futher work with REST API using RJAPI
     For the work with records data we need to set url
-    and auth_data cause` it is available only for AdminUser
+    and auth_data cause' it is available only for AdminUser
     For the work with service data we need to do the same thing
     as we have done with records data,but we need to change url
     with the end as 'service/'
