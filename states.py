@@ -16,7 +16,20 @@ class AddService(Helper):
 
     CONFIRMING = Item()
     NAME = Item()
+    NAME_DE = Item()
     DESCRIPTION = Item()
+    DESCRIPTION_DE = Item()
     PRICE = Item()
     CURRENCY = Item()
     PHOTO = Item()
+
+
+class AddChangeInfo(Helper):
+
+    mode = HelperMode.lowerCamelCase
+
+    INFO = Item()
+    CONFIRMING = Item()
+    AGGRE_WITH_START_ADD_DE_VERSION = Item()
+    ADD_DE_VERSION = Item()
+    ADD_DE_VERSION_CONFIRMING = Item()

@@ -34,5 +34,18 @@ class SourceSetting:
             url = "http://localhost:8000/ru/api/service/"
             auth_data = (os.getenv("USERNAME"), os.getenv("PASS"))
 
+
+    class DoctorInfo(RJAPI):
+        """Class for the work with doctorinfo data
+        -> Set url
+        -> Set auth_data
+        """
+
+        class Meta:
+            url = "http://localhost:8000/ru/api/about/"
+            auth_data = (os.getenv("USERNAME"), os.getenv("PASS"))
+
+
     record = Record()
     service = Service()
+    info = DoctorInfo()

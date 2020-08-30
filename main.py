@@ -6,10 +6,10 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher.filters.builtin import CommandHelp,IDFilter
-from data.contrib import Record, Service
+from data.contrib import Record, Service, DoctorInfo
 from tutorial.tutorial import Tutorial
 from tutorial.quiz import random_fact
-from states import AddService
+from states import AddService, AddChangeInfo
 from validators import TypeValidator
 
 #All the important data for the futher work
@@ -23,11 +23,13 @@ dp.middleware.setup(LoggingMiddleware())
 
 record = Record()
 service = Service()
+info = DoctorInfo()
 tutorial = Tutorial()
 
 #A dict for the adding a new service 
 
 new_service = {}
+new_info = {}
 
 #------------------
 
@@ -58,6 +60,169 @@ async def start_adding_service(message: types.Message):
     await message.answer("Вы в разделе добавления услуги. Ви хотите продолжить?", reply_markup=markup)
 
 
+@dp.message_handler(lambda message: (message.text == "Изменить информацию про себя"), state="*")
+async def start_editing_info_about_me(message: types.Message):
+    await info.get_about_text(bot, message)
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["CHANGEyes", "CHANGEno"]))
+async def change_about_text(query: types.InlineQuery):
+
+    if query.data == "CHANGEyes":
+        for index in range(-1,1):
+            await bot.delete_message(query.message.chat.id, message_id=query.message.message_id + index)
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddChangeInfo.INFO)
+        await query.message.answer("Введите новую информацию")
+    else:
+        for index in range(-1,1):
+            await bot.delete_message(query.message.chat.id, message_id=query.message.message_id + index)
+        await query.message.answer("Ок")
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["ADDABOUTyes", "ADDABOUTno"]))
+async def change_about_text(query: types.InlineQuery):
+
+    if query.data == "ADDABOUTyes":
+        for index in range(-1,1):
+            await bot.delete_message(query.message.chat.id, message_id=query.message.message_id + index)
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddChangeInfo.INFO)
+        await query.message.answer("Введите информацию")
+    else:
+        for index in range(-1,1):
+            await bot.delete_message(query.message.chat.id, message_id=query.message.message_id + index)
+        await query.message.answer("Ок")
+
+
+@dp.message_handler(state=AddChangeInfo.INFO)
+async def set_new_text(message: types.Message):
+    if message.text:
+        await message.answer(message.text)
+
+        new_info[message.from_user.id] = {"about_text": message.text}
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="CHANGEINFOyes", text="Да")
+        button2 = types.InlineKeyboardButton(callback_data="CHANGEINFOno", text="Нет")
+        markup.add(button1, button2)
+        
+        current_state = dp.current_state(user=message.from_user.id)
+        await current_state.set_state(AddChangeInfo.CONFIRMING)
+
+        return await message.answer("Вам все нравиться?", reply_markup=markup)
+    await message.answer("Вы ничего не ввели")
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["CHANGEINFOyes", "CHANGEDINFOno"]),state=AddChangeInfo.CONFIRMING)
+async def agree_with_changed_text(query: types.InlineQuery):
+    
+    if query.data == "CHANGEINFOyes":
+        
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="ADDDEVERSIONyes", text="Да")
+        button2 = types.InlineKeyboardButton(callback_data="ADDDEVERSIONno", text="Нет")
+        markup.add(button1, button2)
+
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddChangeInfo.AGGRE_WITH_START_ADD_DE_VERSION)
+
+        await query.message.answer("Хотите добавить версию на немецком язике?", reply_markup=markup)
+    else:
+        del new_info[query.from_user.id]
+
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="AGREEWITHCHANGEyes", text="Да")
+        button2 = types.InlineKeyboardButton(callback_data="AGREEWITHCHANGEno", text="Нет")
+
+        await query.message.answer("Желаете изменить информацию?")
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["ADDDEVERSIONyes", "ADDDEVERSIONno"]), state=AddChangeInfo.AGGRE_WITH_START_ADD_DE_VERSION)
+async def add_de_version(query: types.InlineQuery):
+
+    current_state = dp.current_state(user=query.from_user.id)
+
+    if query.data == "ADDDEVERSIONyes":
+    
+        await current_state.set_state(AddChangeInfo.ADD_DE_VERSION)
+        await query.message.answer("Введите информацию")
+
+    else:
+
+        await info.set_about_text(bot, query, new_info[query.from_user.id])
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.reset_state()
+        del new_info[query.from_user.id]
+        await query.message.answer("Ок.Поздравляю информация добавлена!")
+
+
+@dp.message_handler(state=AddChangeInfo.ADD_DE_VERSION)
+async def confirm_adding_de_version(message: types.Message):
+
+    if message.text:
+
+        new_info[message.from_user.id]["about_text_de"] = message.text
+
+        await message.answer(message.text)
+
+        current_state = dp.current_state(user=message.from_user.id)
+        await current_state.set_state(AddChangeInfo.ADD_DE_VERSION_CONFIRMING)    
+
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="AGREEWITHDEyes", text="Да")
+        button2 = types.InlineKeyboardButton(callback_data="AGREEWITHDEno", text="Нет")  
+        markup.add(button1, button2)
+
+        return await message.answer("Вам все нравиться?", reply_markup=markup)
+
+    await message.answer("Информация не может быть пустой")
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["AGREEWITHDEyes", "AGREEWITHDEno"]), state = AddChangeInfo.ADD_DE_VERSION_CONFIRMING)
+async def confirming_de_version(query: types.InlineQuery):
+
+    if query.data == "AGREEWITHDEyes":
+        
+        await info.set_about_text(bot, query, new_info[query.from_user.id])
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.reset_state()
+        del new_info[query.from_user.id]
+        await query.message.answer("Поздравляю! Информация добавлена")
+    else:
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(callback_data="WANNACHANGEyes", text="Да")
+        button2 = types.InlineKeyboardButton(callback_data="WANNACHANGEno", text="Нет")  
+        await query.message.answer("Желаете переделать?", reply_markup=markup)
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["WANNACHANGEyes", "WANNACHANGEno"]))
+async def wanna_change_de_version(query: types.InlineQuery):
+
+    if query.data == "WANNACHANGEyes":
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddChangeInfo.ADD_DE_VERSION)
+        await query.message.answer("Введите информацию?")
+    else:
+        del new_info[query.from_user.id]["about_text_de"]
+        await info.set_about_text(bot, query, new_info[query.from_user.id])
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.reset_state()
+        await query.message.answer("Ок, перевод не добавлен")
+
+
+@dp.callback_query_handler(lambda query: (query.data in ["AGREEWITHCHANGEyes", "AGREEWITHCHANGEno"]))
+async def change_filled_text(query: types.InlineQuery):
+    if query.data == "AGREEWITHCHANGEyes":
+        await query.message.answer("Введите другую информацию")
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddChangeInfo.INFO)
+    else:
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.reset_state()
+        await query.message.answer("Информация не была применена")
+
+
+
 @dp.message_handler(state=AddService.NAME)
 async def add_name_to_service(message: types.Message):
     """Handler to process the adding of a name to a new service"""
@@ -69,6 +234,17 @@ async def add_name_to_service(message: types.Message):
     await message.answer("Вы хотите создать услугу с названием '%s'.Вы уверены?" % (message.text), reply_markup=markup) 
 
 
+@dp.message_handler(state=AddService.NAME_DE)
+async def add_name_to_service(message: types.Message):
+    """Handler to process the adding of a name to a new service"""
+
+    markup = types.InlineKeyboardMarkup()
+    button1 = types.InlineKeyboardButton(callback_data="NAME_DE_no", text="Нет,хочу поменять")
+    button2 = types.InlineKeyboardButton(callback_data="NAME_DE_yes", text="Да,хочу продолжить.")
+    markup.add(button1, button2)
+    await message.answer("Вы хотите создать услугу с названием на немецком '%s'.Вы уверены?" % (message.text), reply_markup=markup) 
+
+
 @dp.message_handler(state=AddService.DESCRIPTION)
 async def add_description_to_service(message: types.Message):
     """Handler to process the adding of a description to a new service"""
@@ -78,6 +254,17 @@ async def add_description_to_service(message: types.Message):
     button2 = types.InlineKeyboardButton(callback_data="DESCRIPTIONyes", text="Да,хочу продолжить.")
     markup.add(button1, button2)
     await message.answer("Вы написали '%s'.Вы уверены?" % (message.text), reply_markup=markup) 
+
+
+@dp.message_handler(state=AddService.DESCRIPTION_DE)
+async def add_description_to_service(message: types.Message):
+    """Handler to process the adding of a description to a new service"""
+
+    markup = types.InlineKeyboardMarkup()
+    button1 = types.InlineKeyboardButton(callback_data="DESCRIPTION_DE_no", text="Нет,хочу поменять")
+    button2 = types.InlineKeyboardButton(callback_data="DESCRIPTION_DE_yes", text="Да,хочу продолжить.")
+    markup.add(button1, button2)
+    await message.answer("Вы написали такое описание на немецком '%s'.Вы уверены?" % (message.text), reply_markup=markup) 
 
 
 @dp.message_handler(state=AddService.PRICE)
@@ -220,15 +407,18 @@ async def tutorial_passage(query :types.CallbackQuery):
             await bot.delete_message(chat_id=query.message.chat.id,message_id=query.message.message_id+index)
 
         markup = types.ReplyKeyboardMarkup()
-        button1 = types.KeyboardButton(text="Добавить услугу")
-        markup.add(button1)
+        button1 = types.KeyboardButton(text = "Добавить услугу")
+        button2 = types.KeyboardButton(text = "Изменить информацию про себя")
+        button3 = types.KeyboardButton(text = "Изменить изображения на начальной странице")
+        markup.add(button1, button2, button3)
 
         return await query.message.answer("😔Ну ладно,начну-ко отслеживание записей на сиансы", reply_markup=markup)
 
 
 @dp.callback_query_handler(lambda query: ( query.data in 
-    ["CONFIRMINGno", "CONFIRMINGyes", "NAMEno", "NAMEyes", 
-    "DESCRIPTIONno", "DESCRIPTIONyes", "PRICEno", "PRICEyes", 
+    ["CONFIRMINGno", "CONFIRMINGyes", "NAMEno", "NAMEyes",
+    "NAME_DE_no", "NAME_DE_yes", "DESCRIPTIONno", "DESCRIPTIONyes",
+    "DESCRIPTION_DE_no", "DESCRIPTION_DE_yes", "PRICEno", "PRICEyes",
     "CURRENCYno", "CURRENCYyes", "PHOTOno", "PHOTOyes"]), state="*")
 async def callback(query: types.CallbackQuery):
     """Handler for the creating a new service.
@@ -264,12 +454,24 @@ async def callback(query: types.CallbackQuery):
     elif query.data == "NAMEyes":
         new_service[query.from_user.id]["name"] = query.message.text.split("'")[1]
         current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.NAME_DE)
+        await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
+        return await query.message.answer("Приступим к названию на немецком")
+
+    elif query.data == "NAME_DE_no":
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.NAME_DE)
+        await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
+        return await query.message.answer("Напишите другое название")
+
+    elif query.data == "NAME_DE_yes":
+        new_service[query.from_user.id]["name_de"] = query.message.text.split("'")[1]
+        current_state = dp.current_state(user=query.from_user.id)
         await current_state.set_state(AddService.DESCRIPTION)
         await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
         return await query.message.answer("Приступим к описанию")
 
     elif query.data == "DESCRIPTIONno":
-
         current_state = dp.current_state(user=query.from_user.id)
         await current_state.set_state(AddService.DESCRIPTION)
         await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
@@ -277,6 +479,19 @@ async def callback(query: types.CallbackQuery):
 
     elif query.data == "DESCRIPTIONyes":
         new_service[query.from_user.id]["description"] = query.message.text.split("'")[1]
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.DESCRIPTION_DE)
+        await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
+        return await query.message.answer("Напишите описание на немецком")
+
+    elif query.data == "DESCRIPTION_DE_no":
+        current_state = dp.current_state(user=query.from_user.id)
+        await current_state.set_state(AddService.DESCRIPTION_DE)
+        await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
+        return await query.message.answer("Напишите другое описание на немецком")
+
+    elif query.data == "DESCRIPTION_DE_yes":
+        new_service[query.from_user.id]["description_de"] = query.message.text.split("'")[1]
         current_state = dp.current_state(user=query.from_user.id)
         await current_state.set_state(AddService.PRICE)
         await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
