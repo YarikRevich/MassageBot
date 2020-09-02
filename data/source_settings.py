@@ -46,6 +46,17 @@ class SourceSetting:
             auth_data = (os.getenv("USERNAME"), os.getenv("PASS"))
 
 
+    class VisitImage(RJAPI):
+        """Class for the work with visitimage data
+        -> Set url
+        -> Set auth_data
+        """
+
+        class Meta:
+            url = "http://localhost:8000/ru/api/visitimages/"
+            auth_data = (os.getenv("USERNAME"), os.getenv("PASS"))
+
     record = Record()
     service = Service()
     info = DoctorInfo()
+    visitimages = VisitImage()

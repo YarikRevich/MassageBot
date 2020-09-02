@@ -33,3 +33,11 @@ class AddChangeInfo(Helper):
     AGGRE_WITH_START_ADD_DE_VERSION = Item()
     ADD_DE_VERSION = Item()
     ADD_DE_VERSION_CONFIRMING = Item()
+
+
+class ChangeVisitImage(Helper):
+
+    mode = HelperMode.lowerCamelCase
+
+    EDIT_IMAGE = Item()
+    EDIT_PROCESS = Item()
