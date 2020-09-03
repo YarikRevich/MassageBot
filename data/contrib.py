@@ -48,61 +48,24 @@ class Record(SourceSetting):
 class Service(SourceSetting):
     """Class for the work with service model from web-application"""
 
-    async def test_new_service(self, bot, query: types.CallbackQuery ,new_service_data: dict) -> None:
-        """Creates a fake service to check whether user likes everything he has done"""
-
-        photo_to_send = await bot.download_file(new_service_data["photo"].file_path)
-
-        await bot.send_photo(query.message.chat.id, photo=photo_to_send.read())
-        await bot.send_message(
-            query.message.chat.id,
-             text="Информация новой услуги\nНазвание: %s\n%sОписание: %s\n%sЦена: %s %s\n" % (
-                new_service_data["name"],
-                (("Название на немецком: " + new_service_data["name_de"] + "\n") if new_service_data.get("name_de") else ""),
-                new_service_data["description"],
-                (("Описание на немецком: " + new_service_data["description_de"] + "\n") if new_service_data.get("description_de") else ""),
-                new_service_data["price"],
-                new_service_data["currency"]
-             ))
-
-    async def create_new_service(self, bot, query: types.CallbackQuery, new_service_data: dict) -> None:
+    async def create_new_service(self, data: dict, photo, photo_path: str) -> None:
         """Creates a new service"""
 
-        photo_to_save = await bot.download_file(new_service_data["photo"].file_path)
-
-        self.service.create_entry(data={
-            "name": new_service_data["name"],
-            "name_de": new_service_data["name_de"],
-            "description": new_service_data["description"],
-            "description": new_service_data["description_de"],
-            "price": new_service_data["price"],
-            "currency": new_service_data["currency"]
-            }, files={
-                "photo": (await utils.get_random_id(new_service_data["photo"].file_path.split(".")[-1]), photo_to_save)
-            })
+        self.service.create_entry(data=data, files={"photo": (await utils.get_random_id(photo_path.split(".")[-1]), photo)})
 
 
 class DoctorInfo(SourceSetting):
 
 
-    async def get_about_text(self, bot, message):
+    async def get_about_text(self) -> bool:
         """Returns some info about doctor and checks whether generally it is"""
 
         if info_about := self.info.get_data()["results"]:
-            await bot.send_message(message.chat.id, "Ваше описание")
-            await bot.send_message(message.chat.id, info_about[0]["about_text"])
-
-            return await bot.send_message(
-                message.chat.id, "Хотите изменить его?", 
-                reply_markup=await create_yesno_keyboard(["CHANGEyes", "CHANGEno"], ["Да", "Нет"]))
-
-        await bot.send_message(message.chat.id, "Ваше описание не заполнено")
-        await bot.send_message(
-            message.chat.id, "Хотите добавить его?", 
-            reply_markup=await create_yesno_keyboard(["ADDABOUTyes", "ADDABOUTno"], ["Да", "Нет"]))
+            return info_about[0]["about_text"]
+        return False
 
 
-    async def set_about_text(self, bot, query, data):
+    async def set_about_text(self, data) -> bool:
         """Sets new informations about doctor"""
         
         if result_set := self.info.get_data()["results"]:
@@ -113,38 +76,34 @@ class DoctorInfo(SourceSetting):
 class VisitImage(SourceSetting):
     """A class to work with visitimage model stated with API"""
     
-    async def get_visit_images(self, bot, query):
+    async def get_visit_images(self) -> bool:
         """Returns all the images if they are or send the notification absence"""
 
         if data := self.visitimages.get_data()["results"]:
+            visit_images = []
             for index, entries in enumerate(data):
                 image_url = await utils.format_url(entries["visit_image"])
                 image_in_bytes = await utils.convert_link_into_image(image_url)
-                await query.answer("Изображение №%d" % (index + 1)) 
-                current_state = dp.current_state(user=query.from_user.id)
-                await current_state.set_state(ChangeVisitImage.EDIT_IMAGE)
-                await bot.send_photo(
-                    query.chat.id, 
-                    image_in_bytes.read(), 
-                    reply_markup=await create_yesno_keyboard([entries["id"]], ["Редактировать"]))
-            return 
-        await query.answer("Пока что нет никаких изображений")
+                visit_images.append((entries["id"], image_in_bytes.read()))
+            return visit_images
+        return False
 
 
-    async def set_visit_image(self, bot, query, data):
+    async def set_visit_image(self, data) -> None:
         """Sets a new visitimage"""
         
-        random_name = await utils.get_random_id(data[query.from_user.id]["visitimage"].file_path.split(".")[-1])
-        photo = await bot.download_file(data[query.from_user.id]["visitimage"].file_path)
+        random_name = await utils.get_random_id(data["visitimage"].file_path.split(".")[-1])
 
         self.visitimages.update_data(
-            params={"pk":data[query.from_user.id]["pk"]}, 
+            params={"pk":data["pk"]}, 
             files={
-                "visit_image":(random_name, photo)
+                "visit_image":(random_name, data["visitimage"])
             })
 
     
-    async def delete_visit_image(self, bot, query):
-        pass
+    async def delete_visit_image(self, param) -> None:
+        """Deletes an equal visit image"""
+
+        self.visitimages.delete_data(params=param)
 
     

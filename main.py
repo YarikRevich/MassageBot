@@ -4,7 +4,7 @@ import os
 import requests
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters.builtin import CommandHelp,IDFilter
-from data.contrib import Record, Service, DoctorInfo, VisitImage
+from data.contrib import Record, Service, DoctorInfo, VisitImage, utils
 from tutorial.tutorial import Tutorial
 from tutorial.quiz import random_fact
 from massagebot_components.states import AddService, AddChangeInfo, ChangeVisitImage
@@ -26,6 +26,7 @@ tutorial = Tutorial()
 new_service = {}
 new_info = {}
 new_visit_image = {}
+visit_image_to_delete = {}
 
 #------------------
 
@@ -53,15 +54,39 @@ async def start_adding_service(message: types.Message):
 
 @dp.message_handler(lambda message: (message.text == "Изменить информацию про себя"), state="*")
 async def start_editing_info_about_me(message: types.Message):
-    await info.get_about_text(bot, message)
+
+    if text_about := await info.get_about_text():
+        await bot.send_message(message.chat.id, "Ваше описание")
+        await bot.send_message(message.chat.id, text_about)
+
+        return await bot.send_message(
+            message.chat.id, "Хотите изменить его?", 
+            reply_markup=await create_yesno_keyboard(["CHANGEyes", "CHANGEno"], ["Да", "Нет"]))
+
+    await bot.send_message(message.chat.id, "Ваше описание не заполнено")
+    await bot.send_message(
+        message.chat.id, "Хотите добавить его?", 
+        reply_markup=await create_yesno_keyboard(["ADDABOUTyes", "ADDABOUTno"], ["Да", "Нет"]))
 
 
-@dp.message_handler(lambda message: (message.text == "Изменить изображения на начальной странице"))
+@dp.message_handler(lambda message: (message.text == "Изменить изображения на начальной странице"), state="*")
 async def start_editing_visit_images(message: types.Message):
-    await visitimages.get_visit_images(bot, message)
+
+    if visit_images := await visitimages.get_visit_images():
+
+        current_state = dp.current_state(user=message.from_user.id)
+        await current_state.set_state(ChangeVisitImage.EDIT_IMAGE)
+        for index, image in enumerate(visit_images):
+            await message.answer("Изображение №%d" % (index + 1)) 
+            await bot.send_photo(
+                    message.chat.id, 
+                    image[1], 
+                    reply_markup=await create_yesno_keyboard(["edit_%s" % (image[0], ), "delete_%s" % (image[0], )], ["Редактировать", "Удалить"]))
+        return
+    await message.answer("Пока что нет никаких изображений")
 
 
-@dp.callback_query_handler(lambda query: (query.data in ["CHANGEyes", "CHANGEno"]))
+@dp.callback_query_handler(lambda query: (query.data in ["CHANGEyes", "CHANGEno"]), state="*")
 async def change_about_text(query: types.InlineQuery):
 
     if query.data == "CHANGEyes":
@@ -76,7 +101,7 @@ async def change_about_text(query: types.InlineQuery):
         await query.message.answer("Ок")
 
 
-@dp.callback_query_handler(lambda query: (query.data in ["ADDABOUTyes", "ADDABOUTno"]))
+@dp.callback_query_handler(lambda query: (query.data in ["ADDABOUTyes", "ADDABOUTno"]), state="*")
 async def change_about_text(query: types.InlineQuery):
 
     if query.data == "ADDABOUTyes":
@@ -132,9 +157,8 @@ async def add_de_version(query: types.InlineQuery):
     if query.data == "ADDDEVERSIONyes":
         await current_state.set_state(AddChangeInfo.ADD_DE_VERSION)
         await query.message.answer("Введите информацию")
-
     else:
-        await info.set_about_text(bot, query, new_info[query.from_user.id])
+        await info.set_about_text(new_info[query.from_user.id])
         current_state = dp.current_state(user=query.from_user.id)
         await current_state.reset_state()
         del new_info[query.from_user.id]
@@ -149,11 +173,9 @@ async def confirm_adding_de_version(message: types.Message):
         await message.answer(message.text)
         current_state = dp.current_state(user=message.from_user.id)
         await current_state.set_state(AddChangeInfo.ADD_DE_VERSION_CONFIRMING)    
-
         return await message.answer(
             "Вам все нравиться?", 
             reply_markup=await create_yesno_keyboard(["AGREEWITHDEyes", "AGREEWITHDEno"], ["Да", "Нет"]))
-
     await message.answer("Информация не может быть пустой")
 
 
@@ -161,8 +183,7 @@ async def confirm_adding_de_version(message: types.Message):
 async def confirming_de_version(query: types.InlineQuery):
 
     if query.data == "AGREEWITHDEyes":
-        
-        await info.set_about_text(bot, query, new_info[query.from_user.id])
+        await info.set_about_text(new_info[query.from_user.id])
         current_state = dp.current_state(user=query.from_user.id)
         await current_state.reset_state()
         del new_info[query.from_user.id]
@@ -173,7 +194,7 @@ async def confirming_de_version(query: types.InlineQuery):
             reply_markup=await create_yesno_keyboard(["WANNACHANGEyes", "WANNACHANGEno"], ["Да", "Нет"]))
 
 
-@dp.callback_query_handler(lambda query: (query.data in ["WANNACHANGEyes", "WANNACHANGEno"]))
+@dp.callback_query_handler(lambda query: (query.data in ["WANNACHANGEyes", "WANNACHANGEno"]), state="*")
 async def wanna_change_de_version(query: types.InlineQuery):
 
     if query.data == "WANNACHANGEyes":
@@ -188,7 +209,7 @@ async def wanna_change_de_version(query: types.InlineQuery):
         await query.message.answer("Ок, перевод не добавлен")
 
 
-@dp.callback_query_handler(lambda query: (query.data in ["AGREEWITHCHANGEyes", "AGREEWITHCHANGEno"]))
+@dp.callback_query_handler(lambda query: (query.data in ["AGREEWITHCHANGEyes", "AGREEWITHCHANGEno"]), state="*")
 async def change_filled_text(query: types.InlineQuery):
     if query.data == "AGREEWITHCHANGEyes":
         await query.message.answer("Введите другую информацию")
@@ -255,7 +276,6 @@ async def add_currency_to_service(query: types.CallbackQuery):
     await bot.delete_message(query.message.chat.id, message_id=query.message.message_id)
     current_state = dp.current_state(user=query.from_user.id)
     await current_state.set_state(AddService.CURRENCY)
-        
     return await query.message.answer(
         "Валюта для новой услуги - '%s'.Правильно?" % (query.data), 
         reply_markup=await create_yesno_keyboard(["CURRENCY/yes", "CURRENCY/no"], ["Да,хочу продолжить", "Нет,хочу поменять"])) 
@@ -288,13 +308,6 @@ async def help_command(message :types.Message):
     """Sends some information about this bot"""
 
     await message.answer("❗️Данный бот был розработан специально для сайта http://emassage.name")
-
-
-@dp.message_handler(state="*")
-async def user_is_not_owner(message: types.Message):
-    """Handler to send that user is not an owner"""
-
-    await message.answer("😔Ты не владелец данного бота")
 
 
 @dp.callback_query_handler(lambda query: query.data == "tutorial", state="*")
@@ -354,9 +367,9 @@ async def callback(query: types.CallbackQuery):
         await query.message.answer("Ну ладно")
     else:
         if query.data.split("/")[0][-1] == "_" and query.data.split("/")[1] == "yes":
-            new_service[query.from_user.id]["%s" % (query.data[:-1].lower())] = query.message.text.split("'")[1]
+            new_service[query.from_user.id]["%s" % (query.data.split("/")[0][:-1].lower())] = query.message.text.split("'")[1]
 
-        if query.data.split("/")[1] == "yes":
+        if query.data.split("/")[1] == "yes" and query.data.split("/")[0] != "PHOTO":
             new_service[query.from_user.id]["%s" % (query.data.split("/")[0].lower())] = query.message.text.split("'")[1]
 
         if query.data == "NAME/no":
@@ -400,7 +413,7 @@ async def callback(query: types.CallbackQuery):
             await query.message.answer("Приступим к валюте")
             await query.message.answer(
                 "Виберете", 
-                reply_markup=create_yesno_keyboard(["EUR", "USD", "UAH", "CHF"], ["EUR", "USD", "UAH", "CHF"]))
+                reply_markup = await create_yesno_keyboard(["EUR", "USD", "UAH", "CHF"], ["EUR", "USD", "UAH", "CHF"]))
 
         elif query.data == "CURRENCY/no":
             await current_state.set_state(AddService.CURRENCY)
@@ -415,11 +428,23 @@ async def callback(query: types.CallbackQuery):
             await query.message.answer("Ок,поменяйте фото")
 
         elif query.data == "PHOTO/yes":
-            await service.test_new_service(bot, query,new_service[query.from_user.id])
+            
+            photo = await bot.download_file(new_service[query.from_user.id]["photo"].file_path)
+            await bot.send_photo(query.message.chat.id, photo=photo)
+            await bot.send_message(
+                query.message.chat.id,
+                text="Информация новой услуги\nНазвание: %s\n%sОписание: %s\n%sЦена: %s %s\n" % (
+                    new_service[query.from_user.id]["name"],
+                    (("Название на немецком: " + new_service[query.from_user.id]["name_de"] + "\n") if new_service[query.from_user.id].get("name_de") else ""),
+                    new_service[query.from_user.id]["description"],
+                    (("Описание на немецком: " + new_service[query.from_user.id]["description_de"] + "\n") if new_service[query.from_user.id].get("description_de") else ""),
+                    new_service[query.from_user.id]["price"],
+                    new_service[query.from_user.id]["currency"]
+                ))
             await query.message.answer("Проверте данные новой услуги")
             await query.message.answer(
                 "Все правильно?", 
-                reply_markup=create_yesno_keyboard(["ADDyes", "ADDno"], ["Да", "Нет"]))
+                reply_markup = await create_yesno_keyboard(["ADDyes", "ADDno"], ["Да", "Нет"]))
 
     await bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
 
@@ -427,10 +452,19 @@ async def callback(query: types.CallbackQuery):
 @dp.callback_query_handler(lambda query: True, state=ChangeVisitImage.EDIT_IMAGE)
 async def edit_visit_image(query: types.InlineQuery):
     
-    new_visit_image[query.from_user.id] = {"pk": query.data}
     current_state = dp.current_state(user=query.from_user.id)
-    await current_state.set_state(ChangeVisitImage.EDIT_PROCESS)
-    await query.message.answer("Отошлите новое фото")
+    pk_from_query_data = query.data.split("_")[1]
+
+    if query.data.split("_")[0] == "edit":
+        new_visit_image[query.from_user.id] = {"pk": pk_from_query_data}
+        await current_state.set_state(ChangeVisitImage.EDIT_PROCESS)
+        await query.message.answer("Отошлите новое фото")
+    else:
+        visit_image_to_delete[query.from_user.id] = {"pk": pk_from_query_data}
+        await current_state.set_state(ChangeVisitImage.DELETE_PROCESS)
+        await query.message.answer(
+            "Вы уверены?",
+            reply_markup=await create_yesno_keyboard(["DELETEIMAGEyes", "DELETEIMAGEno"], ["Да", "Нет"]))
 
 
 @dp.message_handler(content_types=["photo"], state=ChangeVisitImage.EDIT_PROCESS)
@@ -442,14 +476,15 @@ async def set_visit_image_process(message: types.InputMedia):
     await message.answer(
         "Вам подходить такое изображение?",
         reply_markup=await create_yesno_keyboard(["VISITIMAGEyes", "VISITIMAGEno"], ["Да", "Нет"]))
-    new_visit_image[message.from_user.id]["visitimage"] = photo_path
+    new_visit_image[message.from_user.id]["visitimage"] = await bot.download_file(photo_path.file_path)
+
 
 
 @dp.callback_query_handler(lambda query:(query.data in ["VISITIMAGEyes", "VISITIMAGEno"]), state=ChangeVisitImage.EDIT_PROCESS)
 async def agree_with_new_visitimage(query: types.InlineQuery):
 
     if query.data == "VISITIMAGEyes":
-        await visitimages.set_visit_image(bot, query, new_visit_image)
+        await visitimages.set_visit_image(new_visit_image[query.from_user.id])
         await query.message.answer("Поздравляю! Изображение добавлено")
     else:
         current_state = dp.current_state(user=query.from_user.id)
@@ -457,12 +492,23 @@ async def agree_with_new_visitimage(query: types.InlineQuery):
         await query.message.answer("Ок")
 
 
+@dp.callback_query_handler(lambda query: (query.data in ["DELETEIMAGEyes", "DELETEIMAGEno"]), state=ChangeVisitImage.DELETE_PROCESS)
+async def delete_visit_image(query: types.InlineQuery):
+    
+    if query.data == "DELETEIMAGEyes":
+        await visitimages.delete_visit_image({"pk":visit_image_to_delete[query.from_user.id]["pk"]})
+        return await query.message.answer("Изображение удалено")
+    await query.message.answer("Oк")
+
 @dp.callback_query_handler(lambda query: (query.data in ["ADDyes", "ADDno"]), state="*")
 async def service_add_confiramtion(query: types.CallbackQuery):
     """Handler to understand wether user wants to add a new service"""
 
     if query.data == "ADDyes":
-        await service.create_new_service(bot, query, new_service[query.from_user.id])
+        photo = await bot.download_file(new_service[query.from_user.id]["photo"].file_path)
+        photo_path = new_service[query.from_user.id]["photo"].file_path
+        del new_service[query.from_user.id]["photo"]
+        await service.create_new_service(new_service[query.from_user.id], photo, photo_path)
         await bot.delete_message(query.message.chat.id, message_id=query.message.message_id)
         await query.message.answer("Поздравляю!Услуга добавлена")
 
@@ -492,7 +538,7 @@ async def rewrite_confiramation(query: types.CallbackQuery):
 async def client_confirmation(query: types.CallbackQuery):
     """A callback hander to make the record inactive and done"""
 
-    author_name = await record.utils.update_data_and_get_author(params={"pk": query.data}, json_data={"status": True})
+    author_name = await utils.update_data_and_get_author(params={"pk": query.data}, json_data={"status": True})
     await bot.edit_message_text(text=f"✅Заказ для {author_name} - выполнен", 
             message_id=query.message.message_id, 
             chat_id=query.message.chat.id)    
