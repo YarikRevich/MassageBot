@@ -17,11 +17,11 @@ class Utils(SourceSetting):
         random.shuffle(nums)
         rand_id = "".join(nums)
 
-        for entry in self.service.get_data()["results"]:
+        for entry in self.service.get_data():
             if entry["photo"].split("/")[-1] == rand_id:
                 return await self.get_random_id
 
-        for entry in self.visitimages.get_data()["results"]:
+        for entry in self.visitimages.get_data():
             if entry["visit_image"].split("/")[-1] == rand_id:
                 return await self.get_random_id
         return rand_id + ".%s" % (extansion)

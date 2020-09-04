@@ -42,3 +42,10 @@ class ChangeVisitImage(Helper):
     EDIT_IMAGE = Item()
     EDIT_PROCESS = Item()
     DELETE_PROCESS = Item()
+
+
+class AddVisitImage(Helper):
+
+    mode = HelperMode.lowerCamelCase
+
+    ADD_IMAGE = Item()

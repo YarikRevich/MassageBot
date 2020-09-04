@@ -32,7 +32,7 @@ class Record(SourceSetting):
             await asyncio.sleep(3)
             info = self.record.get_and_update_json(json_data={"seen":True},filters={"seen":False},patch_method=True)
             if info:
-                for dictionary in info["results"]:
+                for dictionary in info:
                     formatter = FormattedInfo(dictionary)
 
                     await bot.send_message(
@@ -60,7 +60,7 @@ class DoctorInfo(SourceSetting):
     async def get_about_text(self) -> bool:
         """Returns some info about doctor and checks whether generally it is"""
 
-        if info_about := self.info.get_data()["results"]:
+        if info_about := self.info.get_data():
             return info_about[0]["about_text"]
         return False
 
@@ -68,7 +68,7 @@ class DoctorInfo(SourceSetting):
     async def set_about_text(self, data) -> bool:
         """Sets new informations about doctor"""
         
-        if result_set := self.info.get_data()["results"]:
+        if result_set := self.info.get_data():
             return self.info.update_data(params={"pk":result_set[0]["id"]},json_data=data)
         return self.info.create_entry(data=data)
 
@@ -79,7 +79,7 @@ class VisitImage(SourceSetting):
     async def get_visit_images(self) -> bool:
         """Returns all the images if they are or send the notification absence"""
 
-        if data := self.visitimages.get_data()["results"]:
+        if data := self.visitimages.get_data():
             visit_images = []
             for index, entries in enumerate(data):
                 image_url = await utils.format_url(entries["visit_image"])
@@ -92,12 +92,12 @@ class VisitImage(SourceSetting):
     async def set_visit_image(self, data) -> None:
         """Sets a new visitimage"""
         
-        random_name = await utils.get_random_id(data["visitimage"].file_path.split(".")[-1])
+        random_name = await utils.get_random_id(data["visitimage_path"].split(".")[-1])
 
         self.visitimages.update_data(
             params={"pk":data["pk"]}, 
             files={
-                "visit_image":(random_name, data["visitimage"])
+                "visit_image":(random_name, data["visitimage"].read())
             })
 
     
@@ -107,3 +107,8 @@ class VisitImage(SourceSetting):
         self.visitimages.delete_data(params=param)
 
     
+    async def add_new_visit_image(self, photo_path, photo) -> None:
+        """Adds new visit image"""
+
+        random_name = await utils.get_random_id(photo_path.split(".")[-1])
+        self.visitimages.create_entry(files={"visit_image":(random_name, photo.read())})
