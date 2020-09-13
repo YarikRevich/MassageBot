@@ -11,6 +11,7 @@ from massagebot_components.states import AddService, AddChangeInfo, ChangeVisitI
 from massagebot_components.validators import TypeValidator
 from massagebot_components.keyboards import create_yesno_keyboard, create_reply_keyboard
 from massagebot_components.bot_settings import bot, dp
+from massagebot_components.decorators import freeze_check
 from aiogram.utils.exceptions import MessageToDeleteNotFound
 
 
@@ -41,7 +42,9 @@ async def start_func(message: types.Message):
         reply_markup=await create_yesno_keyboard(["TUTORIALyes", "TUTORIALno"], ["Да", "Нет"]))
 
 
+
 @dp.message_handler(lambda message: message.text == "Добавить услугу",state="*")
+@freeze_check
 async def start_adding_service(message: types.Message):
     """A handler to start an adding of a new service""" 
 
@@ -54,6 +57,7 @@ async def start_adding_service(message: types.Message):
 
 
 @dp.message_handler(lambda message: (message.text == "Изменить информацию про себя"), state="*")
+@freeze_check
 async def start_editing_info_about_me(message: types.Message):
 
     if text_about := await info.get_about_text():
@@ -71,6 +75,7 @@ async def start_editing_info_about_me(message: types.Message):
 
 
 @dp.message_handler(lambda message: (message.text == "Изменить изображения на начальной странице"), state="*")
+@freeze_check
 async def start_editing_visit_images(message: types.Message):
 
     if visit_images := await visitimages.get_visit_images():
@@ -93,6 +98,7 @@ async def start_editing_visit_images(message: types.Message):
     
 
 @dp.callback_query_handler(lambda query: query.data == "NEWVISITIMAGE", state="*")
+@freeze_check
 async def start_adding_new_visit_image(query: types.InlineQuery):
 
     try:
@@ -107,6 +113,7 @@ async def start_adding_new_visit_image(query: types.InlineQuery):
 
 
 @dp.message_handler(content_types=["photo"], state = AddVisitImage.ADD_IMAGE)
+@freeze_check
 async def add_new_visit_image(photo: types.InputMedia):
 
     image = await photo["photo"][1].get_file()
@@ -121,6 +128,7 @@ async def add_new_visit_image(photo: types.InputMedia):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["NEWVISITIMAGEAGREE", "NEWVISITIMAGEDISAGREE"]), state=AddVisitImage.ADD_IMAGE)
+@freeze_check
 async def agreement_width_new_visit_image(query: types.InlineQuery):
 
     current_state = dp.current_state(user=query.from_user.id)
@@ -139,6 +147,7 @@ async def agreement_width_new_visit_image(query: types.InlineQuery):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["CHANGEyes", "CHANGEno"]), state="*")
+@freeze_check
 async def change_about_text(query: types.InlineQuery):
 
     if query.data == "CHANGEyes":
@@ -154,6 +163,7 @@ async def change_about_text(query: types.InlineQuery):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["ADDABOUTyes", "ADDABOUTno"]), state="*")
+@freeze_check
 async def change_about_text(query: types.InlineQuery):
 
     if query.data == "ADDABOUTyes":
@@ -169,6 +179,7 @@ async def change_about_text(query: types.InlineQuery):
 
 
 @dp.message_handler(state=AddChangeInfo.INFO)
+@freeze_check
 async def set_new_text(message: types.Message):
     
     if message.text:
@@ -185,6 +196,7 @@ async def set_new_text(message: types.Message):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["CHANGEINFOyes", "CHANGEDINFOno"]),state=AddChangeInfo.CONFIRMING)
+@freeze_check
 async def agree_with_changed_text(query: types.InlineQuery):
     
     if query.data == "CHANGEINFOyes":
@@ -203,6 +215,7 @@ async def agree_with_changed_text(query: types.InlineQuery):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["ADDDEVERSIONyes", "ADDDEVERSIONno"]), state=AddChangeInfo.AGGRE_WITH_START_ADD_DE_VERSION)
+@freeze_check
 async def add_de_version(query: types.InlineQuery):
 
     current_state = dp.current_state(user=query.from_user.id)
@@ -218,6 +231,7 @@ async def add_de_version(query: types.InlineQuery):
 
 
 @dp.message_handler(state=AddChangeInfo.ADD_DE_VERSION)
+@freeze_check
 async def confirm_adding_de_version(message: types.Message):
 
     if message.text:
@@ -232,6 +246,7 @@ async def confirm_adding_de_version(message: types.Message):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["AGREEWITHDEyes", "AGREEWITHDEno"]), state = AddChangeInfo.ADD_DE_VERSION_CONFIRMING)
+@freeze_check
 async def confirming_de_version(query: types.InlineQuery):
 
     if query.data == "AGREEWITHDEyes":
@@ -247,6 +262,7 @@ async def confirming_de_version(query: types.InlineQuery):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["WANNACHANGEyes", "WANNACHANGEno"]), state="*")
+@freeze_check
 async def wanna_change_de_version(query: types.InlineQuery):
 
     if query.data == "WANNACHANGEyes":
@@ -262,6 +278,7 @@ async def wanna_change_de_version(query: types.InlineQuery):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["AGREEWITHCHANGEyes", "AGREEWITHCHANGEno"]), state="*")
+@freeze_check
 async def change_filled_text(query: types.InlineQuery):
 
     if query.data == "AGREEWITHCHANGEyes":
@@ -275,6 +292,7 @@ async def change_filled_text(query: types.InlineQuery):
 
 
 @dp.message_handler(state=AddService.NAME)
+@freeze_check
 async def add_name_to_service(message: types.Message):
     """Handler to process the adding of a name to a new service"""
 
@@ -284,6 +302,7 @@ async def add_name_to_service(message: types.Message):
 
 
 @dp.message_handler(state=AddService.NAME_DE)
+@freeze_check
 async def add_name_to_service(message: types.Message):
     """Handler to process the adding of a name to a new service"""
 
@@ -293,6 +312,7 @@ async def add_name_to_service(message: types.Message):
 
 
 @dp.message_handler(state=AddService.DESCRIPTION)
+@freeze_check
 async def add_description_to_service(message: types.Message):
     """Handler to process the adding of a description to a new service"""
 
@@ -302,6 +322,7 @@ async def add_description_to_service(message: types.Message):
 
 
 @dp.message_handler(state=AddService.DESCRIPTION_DE)
+@freeze_check
 async def add_description_to_service(message: types.Message):
     """Handler to process the adding of a description to a new service"""
 
@@ -311,6 +332,7 @@ async def add_description_to_service(message: types.Message):
 
 
 @dp.message_handler(state=AddService.PRICE)
+@freeze_check
 async def add_price_to_service(message: types.Message):
     """Handler to process the adding of a price to a new service"""
 
@@ -322,6 +344,7 @@ async def add_price_to_service(message: types.Message):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["EUR", "USD", "UAH", "CHF"]), state="*")
+@freeze_check
 async def add_currency_to_service(query: types.CallbackQuery):
     """Handler to process the adding of a currency to a new service"""
 
@@ -335,6 +358,7 @@ async def add_currency_to_service(query: types.CallbackQuery):
 
 
 @dp.message_handler(state=AddService.PHOTO, content_types=["photo"])
+@freeze_check
 async def add_image_to_service(file :types.InputMediaPhoto):
     """Handler to process the adding of a photo to a new service"""
 
@@ -350,6 +374,7 @@ async def add_image_to_service(file :types.InputMediaPhoto):
 
 
 @dp.message_handler(state=AddService.PHOTO)
+@freeze_check
 async def image_getter(message :types.Message):
     """Handler to notificate user that he needs to a photo not a text"""
 
@@ -357,6 +382,7 @@ async def image_getter(message :types.Message):
 
 
 @dp.message_handler(CommandHelp(),IDFilter(user_id=os.getenv("USER_ID")),state="*")
+@freeze_check
 async def help_command(message :types.Message):
     """Sends some information about this bot"""
 
@@ -364,6 +390,7 @@ async def help_command(message :types.Message):
 
 
 @dp.callback_query_handler(lambda query: query.data == "tutorial", state="*")
+@freeze_check
 async def tutorial_callback(query: types.CallbackQuery):
     """Handler for the test confirming button"""
 
@@ -371,12 +398,15 @@ async def tutorial_callback(query: types.CallbackQuery):
         await bot.delete_message(chat_id=query.message.chat.id,message_id=query.message.message_id+index)
     await query.message.answer(text="😘Молодец!Обучение пройдено!\nА как награду,пуличите интерестный факт!")
     await query.message.answer(text=await random_fact())
-    loop = asyncio.get_running_loop()
-    loop.create_task(record.start_pooling(bot))
-    await query.message.answer(text="☺️Ну,а я,начну отслеживание записей на сиансы!")
+    if await utils.test_request():
+        loop = asyncio.get_running_loop()
+        loop.create_task(record.start_pooling())
+        return await query.message.answer(text="☺️Ну,а я,начну отслеживание записей на сиансы!")  
+    return await utils.connection_revise()
 
 
 @dp.callback_query_handler(lambda query: ( query.data in ["TUTORIALno", "TUTORIALyes"] ), state="*")
+@freeze_check
 async def tutorial_passage(query :types.CallbackQuery):
     """Handler to understand wether user wants to pass a tutorial"""
 
@@ -385,13 +415,15 @@ async def tutorial_passage(query :types.CallbackQuery):
             await bot.delete_message(chat_id=query.message.chat.id,message_id=query.message.message_id+index)
         await tutorial.send_tutorial(query)
     else:
-        loop = asyncio.get_running_loop()
-        loop.create_task(record.start_pooling(bot))
-        for index in range(-1,1):
-            await bot.delete_message(chat_id=query.message.chat.id,message_id=query.message.message_id+index)
-        await query.message.answer(
-            "😔Ну ладно,начну-ко отслеживание записей на сиансы", 
-            reply_markup=await create_reply_keyboard(["Добавить услугу", "Изменить информацию про себя", "Изменить изображения на начальной странице"]))
+        if await utils.test_request():
+            loop = asyncio.get_running_loop()
+            loop.create_task(record.start_pooling())
+            for index in range(-1,1):
+                await bot.delete_message(chat_id=query.message.chat.id,message_id=query.message.message_id+index)
+            return await query.message.answer(
+                "😔Ну ладно,начну-ко отслеживание записей на сиансы", 
+                reply_markup=await create_reply_keyboard(["Добавить услугу", "Изменить информацию про себя", "Изменить изображения на начальной странице"]))
+        return await utils.connection_revise()
 
 
 @dp.callback_query_handler(lambda query: ( query.data in 
@@ -399,6 +431,7 @@ async def tutorial_passage(query :types.CallbackQuery):
     "NAME_DE_/no", "NAME_DE_/yes", "DESCRIPTION/no", "DESCRIPTION/yes",
     "DESCRIPTION_DE_/no", "DESCRIPTION_DE_/yes", "PRICE/no", "PRICE/yes",
     "CURRENCY/no", "CURRENCY/yes", "PHOTO/no", "PHOTO/yes"]), state="*")
+@freeze_check
 async def callback(query: types.CallbackQuery):
     """Handler for the creating a new service.
     Contains:
@@ -503,6 +536,7 @@ async def callback(query: types.CallbackQuery):
 
 
 @dp.callback_query_handler(lambda query: True, state=ChangeVisitImage.EDIT_IMAGE)
+@freeze_check
 async def edit_visit_image(query: types.InlineQuery):
     
     current_state = dp.current_state(user=query.from_user.id)
@@ -523,6 +557,7 @@ async def edit_visit_image(query: types.InlineQuery):
 
 
 @dp.message_handler(content_types=["photo"], state=ChangeVisitImage.EDIT_PROCESS)
+@freeze_check
 async def set_visit_image_process(message: types.InputMedia):
     
     photo_path = await message["photo"][1].get_file()
@@ -537,6 +572,7 @@ async def set_visit_image_process(message: types.InputMedia):
 
 
 @dp.callback_query_handler(lambda query:(query.data in ["VISITIMAGEyes", "VISITIMAGEno"]), state=ChangeVisitImage.EDIT_PROCESS)
+@freeze_check
 async def agree_with_new_visitimage(query: types.InlineQuery):
 
     try:
@@ -556,6 +592,7 @@ async def agree_with_new_visitimage(query: types.InlineQuery):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["DELETEIMAGEyes", "DELETEIMAGEno"]), state=ChangeVisitImage.DELETE_PROCESS)
+@freeze_check
 async def delete_visit_image(query: types.InlineQuery):
     
     if query.data == "DELETEIMAGEyes":
@@ -569,7 +606,9 @@ async def delete_visit_image(query: types.InlineQuery):
         return await query.message.answer("🥳Изображение удалено")
     await query.message.answer("😔Oк")
 
+
 @dp.callback_query_handler(lambda query: (query.data in ["ADDyes", "ADDno"]), state="*")
+@freeze_check
 async def service_add_confiramtion(query: types.CallbackQuery):
     """Handler to understand wether user wants to add a new service"""
 
@@ -589,6 +628,7 @@ async def service_add_confiramtion(query: types.CallbackQuery):
 
 
 @dp.callback_query_handler(lambda query: (query.data in ["REWRITEyes", "REWRITEno"]), state="*")
+@freeze_check
 async def rewrite_confiramation(query: types.CallbackQuery):
     """Handler to understand whether user wants to rewrite his new service or not"""
 
@@ -604,11 +644,13 @@ async def rewrite_confiramation(query: types.CallbackQuery):
     
 
 @dp.callback_query_handler(lambda query: True, state="*")
+@freeze_check
 async def client_confirmation(query: types.CallbackQuery):
     """A callback hander to make the record inactive and done"""
 
     author_name = await utils.update_data_and_get_author(params={"pk": query.data}, json_data={"status": True})
-    await bot.edit_message_text(text=f"✅Заказ для {author_name} - выполнен", 
+    author_name_to_send = author_name if author_name else "Имя не указано"
+    await bot.edit_message_text(text=f"✅Заказ для {author_name_to_send} - выполнен", 
             message_id=query.message.message_id, 
             chat_id=query.message.chat.id)    
 
