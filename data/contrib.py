@@ -87,7 +87,8 @@ class VisitImage(SourceSetting):
             for index, entries in enumerate(data):
                 image_url = await utils.format_url(entries["visit_image"])
                 image_in_bytes = await utils.convert_link_into_image(image_url)
-                visit_images.append((entries["id"], image_in_bytes.read()))
+                if image_in_bytes is not None:
+                    visit_images.append((entries["id"], image_in_bytes.read()))
             return visit_images
         return False
 

@@ -3,15 +3,7 @@ from RJAPI.contrib import RJAPI
 
 
 class SourceSetting:
-    """
-    Special class for the setting some settings
-    for the futher work with REST API using RJAPI
-    For the work with records data we need to set url
-    and auth_data cause' it is available only for AdminUser
-    For the work with service data we need to do the same thing
-    as we have done with records data,but we need to change url
-    with the end as 'service/'
-    """
+    """Special class for the setting some settings for RJAPI."""
 
     class Record(RJAPI):
         """Class for the work with records data
@@ -20,7 +12,7 @@ class SourceSetting:
         """
 
         class Meta:
-            url = "http://localhost:8000/ru/api/records/"
+            url = os.getenv("URL1")
             auth_data = (os.getenv("USERNAME"), os.getenv("PASS"))
 
 
@@ -31,7 +23,7 @@ class SourceSetting:
         """
 
         class Meta:
-            url = "http://localhost:8000/ru/api/service/"
+            url = os.getenv("URL2")
             auth_data = (os.getenv("USERNAME"), os.getenv("PASS"))
 
 
@@ -42,7 +34,7 @@ class SourceSetting:
         """
 
         class Meta:
-            url = "http://localhost:8000/ru/api/about/"
+            url = os.getenv("URL3")
             auth_data = (os.getenv("USERNAME"), os.getenv("PASS"))
 
 
@@ -53,7 +45,7 @@ class SourceSetting:
         """
 
         class Meta:
-            url = "http://localhost:8000/ru/api/visitimages/"
+            url = os.getenv("URL4")
             auth_data = (os.getenv("USERNAME"), os.getenv("PASS"))
 
     record = Record()
