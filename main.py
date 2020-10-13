@@ -36,11 +36,12 @@ visit_image_to_delete = {}
 async def start_func(message: types.Message):
     """Handler for the /start command to start a relationship between user and bot"""    
 
+    current_state = dp.current_state(user=message.from_user.id)
+    await current_state.reset_state()
     await message.answer("😜Hello!Вас приветствует бот сделаный для администрирования сайта http://emassage.com\nЗдесь Вы можете:\n- Просматривать актуальные записи клиентов\n- Добавлять новые услуги\n- Мониторить статистику\n❗️Бот находится в розработке,его функционал будет расширяться")
     await message.answer(
         "🥺Хотите пройти обучение?",
         reply_markup=await create_yesno_keyboard(["TUTORIALyes", "TUTORIALno"], ["Да", "Нет"]))
-
 
 
 @dp.message_handler(lambda message: message.text == "Добавить услугу",state="*")
@@ -538,7 +539,8 @@ async def callback(query: types.CallbackQuery):
 @dp.callback_query_handler(lambda query: True, state=ChangeVisitImage.EDIT_IMAGE)
 @freeze_check
 async def edit_visit_image(query: types.InlineQuery):
-    
+    """Main entrypoint of visit_image editing."""
+
     current_state = dp.current_state(user=query.from_user.id)
     pk_from_query_data = query.data.split("_")[1]
 
@@ -554,12 +556,11 @@ async def edit_visit_image(query: types.InlineQuery):
             reply_markup=await create_yesno_keyboard(["DELETEIMAGEyes", "DELETEIMAGEno"], ["✅Да", "❌Нет"]))
         
 
-
-
 @dp.message_handler(content_types=["photo"], state=ChangeVisitImage.EDIT_PROCESS)
 @freeze_check
 async def set_visit_image_process(message: types.InputMedia):
-    
+    """Starts visit_image adding."""
+
     photo_path = await message["photo"][1].get_file()
     photo = await bot.download_file(photo_path.file_path)
     await bot.send_photo(message.chat.id, photo)
@@ -574,6 +575,7 @@ async def set_visit_image_process(message: types.InputMedia):
 @dp.callback_query_handler(lambda query:(query.data in ["VISITIMAGEyes", "VISITIMAGEno"]), state=ChangeVisitImage.EDIT_PROCESS)
 @freeze_check
 async def agree_with_new_visitimage(query: types.InlineQuery):
+    """Main point of visit_image adding."""
 
     try:
         all_message_number = len(await visitimages.get_visit_images()) * 2 + 4
@@ -594,7 +596,8 @@ async def agree_with_new_visitimage(query: types.InlineQuery):
 @dp.callback_query_handler(lambda query: (query.data in ["DELETEIMAGEyes", "DELETEIMAGEno"]), state=ChangeVisitImage.DELETE_PROCESS)
 @freeze_check
 async def delete_visit_image(query: types.InlineQuery):
-    
+    """Deletes current visit_image."""
+
     if query.data == "DELETEIMAGEyes":
         try:
             all_message_number = len(await visitimages.get_visit_images()) * 2 + 3
